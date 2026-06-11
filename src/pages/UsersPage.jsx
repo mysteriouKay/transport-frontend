@@ -49,7 +49,6 @@ export default function UsersPage() {
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
-
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow-sm px-8 py-4 flex justify-between items-center">
           <div>
@@ -84,6 +83,7 @@ export default function UsersPage() {
                       <div>
                         <p className="font-bold text-gray-800">{u.fullName}</p>
                         <p className="text-gray-500 text-sm">{u.email}</p>
+                        <p className="text-gray-400 text-xs">{u.phone || 'No phone'}</p>
                         <span className={`text-xs px-3 py-1 rounded-full mt-1 inline-block font-medium ${roleColor(u.role)}`}>
                           {roleIcon(u.role)} {u.role}
                         </span>
@@ -91,9 +91,9 @@ export default function UsersPage() {
                     </div>
                     <button
                       onClick={() => handleDelete(u.id)}
-                      className="text-red-400 hover:text-red-600 text-xl transition"
+                      className="text-red-400 hover:text-red-600 text-sm font-medium transition"
                     >
-                      🗑️
+                      Delete
                     </button>
                   </div>
                 </div>

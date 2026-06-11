@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getStudents, createStudent, updateStudent, deleteStudent, getSchools, getVehicles } from '../services/api'
+import { getStudents, createStudent, updateStudent, deleteStudent, getSchools, getVehicles, getUsers } from '../services/api'
 import Sidebar from '../components/Sidebar'
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([])
   const [schools, setSchools] = useState([])
   const [vehicles, setVehicles] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingStudent, setEditingStudent] = useState(null)
@@ -14,10 +15,11 @@ export default function StudentsPage() {
 
   const fetchAll = async () => {
     try {
-      const [sRes, schRes, vRes] = await Promise.all([getStudents(), getSchools(), getVehicles()])
+      const [sRes, schRes, vRes, uRes] = await Promise.all([getStudents(), getSchools(), getVehicles(), getUsers()])
       setStudents(sRes.data)
       setSchools(schRes.data)
       setVehicles(vRes.data)
+      setUsers(uRes.data)
     } catch (err) {
       console.error(err)
     } finally {
@@ -70,10 +72,12 @@ export default function StudentsPage() {
     fetchAll()
   }
 
+  const parents = users.filter(u => u.role === 'parent')
+  const studentUsers = users.filter(u => u.role === 'student')
+
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
-
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow-sm px-8 py-4 flex justify-between items-center">
           <div>
@@ -94,6 +98,32 @@ export default function StudentsPage() {
               <h3 className="text-lg font-semibold mb-4">{editingStudent ? 'Edit Student' : 'Add New Student'}</h3>
               {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
               <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student (User Account)</label>
+                  <select
+                    value={form.userId}
+                    onChange={(e) => setForm({ ...form, userId: e.target.value })}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Student</option>
+                    {studentUsers.map(u => (
+                      <option key={u.id} value={u.id}>{u.fullName} — {u.email}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent</label>
+                  <select
+                    value={form.parentId}
+                    onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+                    className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Parent</option>
+                    {parents.map(p => (
+                      <option key={p.id} value={p.id}>{p.fullName} — {p.email}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
                   <input
@@ -159,6 +189,7 @@ export default function StudentsPage() {
                 ) : (
                   students.map((s, index) => {
                     const assignedVehicle = vehicles.find(v => v.id === s.vehicleId)
+                    const parentUser = users.find(u => u.id === s.parentId)
                     return (
                       <tr key={s.id} className="border-b hover:bg-gray-50 transition">
                         <td className="px-6 py-4 text-gray-400 text-sm">{index + 1}</td>
@@ -167,16 +198,14 @@ export default function StudentsPage() {
                           <p className="text-gray-400 text-xs">{s.user?.email}</p>
                         </td>
                         <td className="px-6 py-4 text-gray-500 text-sm">{s.grade || 'N/A'}</td>
-                        <td className="px-6 py-4 text-gray-500 text-sm">{s.parent?.fullName || 'N/A'}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm">{parentUser?.fullName || s.parent?.fullName || 'N/A'}</td>
                         <td className="px-6 py-4">
                           {assignedVehicle ? (
                             <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
                               {assignedVehicle.plateNumber}
                             </span>
                           ) : (
-                            <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-500">
-                              Not assigned
-                            </span>
+                            <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-500">Not assigned</span>
                           )}
                         </td>
                         <td className="px-6 py-4 flex gap-3">
