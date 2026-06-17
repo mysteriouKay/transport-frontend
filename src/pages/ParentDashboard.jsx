@@ -44,14 +44,29 @@ export default function ParentDashboard() {
     }
   }
 
-  const fetchActiveTripAndLocation = async () => {
+  const fetchMyData = async () => {
     try {
-      const tripsRes = await getTrips()
-      const inProgress = tripsRes.data.find(t => t.status === 'in_progress')
-      if (inProgress) {
-        setActiveTrip(inProgress)
+      const [studentsRes, paymentsRes, tripsRes] = await Promise.all([
+        getStudents(), getPayments(), getTrips()
+      ])
+
+      // Get only this parent's children
+      const children = studentsRes.data.filter(s => s.parentId === user.id)
+      setMyStudents(children)
+
+      // Get vehicle IDs for this parent's children
+      const childVehicleIds = children.map(c => c.vehicleId).filter(Boolean)
+
+      // Find active trip for this parent's child's vehicle
+      const allTrips = tripsRes.data
+      const myActiveTrip = allTrips.find(t =>
+        t.status === 'in_progress' && childVehicleIds.includes(t.vehicleId)
+      )
+
+      if (myActiveTrip) {
+        setActiveTrip(myActiveTrip)
         try {
-          const locRes = await getLatestLocation(inProgress.id)
+          const locRes = await getLatestLocation(myActiveTrip.id)
           setBusLocation(locRes.data)
           setLastUpdated(new Date().toLocaleTimeString())
         } catch {
@@ -61,20 +76,18 @@ export default function ParentDashboard() {
         setActiveTrip(null)
         setBusLocation(null)
       }
-      setTripHistory(tripsRes.data.filter(t => t.status === 'completed').slice(0, 20))
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
-  const fetchMyData = async () => {
-    try {
-      const [studentsRes, paymentsRes] = await Promise.all([getStudents(), getPayments()])
-      const children = studentsRes.data.filter(s => s.parentId === user.id)
-      setMyStudents(children)
+      // Trip history for this parent's child's vehicle
+      const myTripHistory = allTrips.filter(t =>
+        t.status === 'completed' && childVehicleIds.includes(t.vehicleId)
+      ).slice(0, 20)
+      setTripHistory(myTripHistory)
+
+      // Payments for this parent's children
       const childIds = children.map(c => c.id)
       const myPayments = paymentsRes.data.filter(p => childIds.includes(p.studentId))
       setPayments(myPayments)
+
     } catch (err) {
       console.error(err)
     }
@@ -82,9 +95,8 @@ export default function ParentDashboard() {
 
   useEffect(() => {
     fetchNotifications()
-    fetchActiveTripAndLocation()
     fetchMyData()
-    const interval = setInterval(fetchActiveTripAndLocation, 10000)
+    const interval = setInterval(fetchMyData, 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -146,17 +158,21 @@ export default function ParentDashboard() {
         </div>
 
         {/* My Children */}
-        {myStudents.length > 0 && (
+        {myStudents.length > 0 ? (
           <div className="bg-white rounded-2xl shadow p-4 mb-6 flex gap-4 flex-wrap">
             {myStudents.map(s => (
               <div key={s.id} className="flex items-center gap-3 bg-green-50 px-4 py-2 rounded-xl">
                 <span className="text-2xl">🎒</span>
                 <div>
-                  <p className="font-medium text-gray-800">{s.user?.fullName}</p>
+                  <p className="font-medium text-gray-800">{s.user?.fullName || 'Student'}</p>
                   <p className="text-gray-500 text-xs">Grade {s.grade} • Bus: {s.vehicle?.plateNumber || 'Not assigned'}</p>
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6 text-yellow-700 text-sm">
+            ⚠️ No children linked to your account yet. Please contact the administrator.
           </div>
         )}
 
@@ -165,14 +181,16 @@ export default function ParentDashboard() {
           <div className="flex justify-between items-center mb-4">
             <div>
               <h2 className="text-lg font-bold text-gray-800">🚌 Bus Status</h2>
-              {activeTrip ? (
+              {myStudents.length === 0 ? (
+                <p className="text-gray-400 text-sm">Link a child to your account to see bus status</p>
+              ) : activeTrip ? (
                 <div>
                   <p className="text-green-600 font-medium">● Bus is currently on the way</p>
                   <p className="text-gray-500 text-sm">Route: {activeTrip.route?.name || 'N/A'} • Vehicle: {activeTrip.vehicle?.plateNumber || 'N/A'}</p>
                   {lastUpdated && <p className="text-gray-400 text-xs">Location updated: {lastUpdated}</p>}
                 </div>
               ) : (
-                <p className="text-gray-400">No active trips right now</p>
+                <p className="text-gray-400">No active trip for your child's bus right now</p>
               )}
             </div>
             {activeTrip && busLocation && (
@@ -259,7 +277,7 @@ export default function ParentDashboard() {
           <div className="bg-white rounded-2xl shadow overflow-hidden">
             <div className="px-6 py-4 border-b">
               <h2 className="text-lg font-bold text-gray-800">🛣️ Trip History</h2>
-              <p className="text-gray-500 text-sm">Recent completed trips</p>
+              <p className="text-gray-500 text-sm">Completed trips for your child's bus</p>
             </div>
             {tripHistory.length === 0 ? (
               <p className="text-gray-400 text-center py-12">No completed trips yet.</p>

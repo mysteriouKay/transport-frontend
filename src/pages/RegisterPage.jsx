@@ -26,10 +26,10 @@ export default function RegisterPage() {
         ...form,
         schoolId: form.schoolId ? parseInt(form.schoolId) : null
       })
-      setSuccess(`User "${form.fullName}" registered successfully! ID: ${res.data.userId}`)
+      setSuccess(`✅ User "${res.data.user.fullName}" registered successfully with role: ${res.data.user.role}`)
       setForm({ fullName: '', email: '', password: '', role: 'parent', schoolId: '' })
     } catch (err) {
-      setError(err.response?.data || 'Failed to register user.')
+      setError(err.response?.data?.message || 'Failed to register user.')
     } finally {
       setLoading(false)
     }
@@ -43,10 +43,17 @@ export default function RegisterPage() {
     return 'bg-gray-100 text-gray-700'
   }
 
+  const roleIcon = (role) => {
+    if (role === 'admin') return '👑'
+    if (role === 'driver') return '🚗'
+    if (role === 'parent') return '👨‍👩‍👧'
+    if (role === 'student') return '🎒'
+    return '👤'
+  }
+
   return (
     <div className="min-h-screen flex bg-gray-100">
       <Sidebar />
-
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow-sm px-8 py-4">
           <h1 className="text-2xl font-bold text-gray-800">Register New User</h1>
@@ -66,7 +73,7 @@ export default function RegisterPage() {
 
               {success && (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 text-sm">
-                  ✅ {success}
+                  {success}
                 </div>
               )}
 
@@ -90,7 +97,7 @@ export default function RegisterPage() {
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="john@transport.com"
+                    placeholder="john@example.com"
                     required
                   />
                 </div>
@@ -121,11 +128,7 @@ export default function RegisterPage() {
                             : 'border-gray-200 text-gray-500 hover:border-gray-300'
                         }`}
                       >
-                        {role === 'admin' && '👑 '}
-                        {role === 'driver' && '🚗 '}
-                        {role === 'parent' && '👨‍👩‍👧 '}
-                        {role === 'student' && '🎒 '}
-                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                        {roleIcon(role)} {role.charAt(0).toUpperCase() + role.slice(1)}
                       </button>
                     ))}
                   </div>
